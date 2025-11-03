@@ -4,7 +4,7 @@ A privacy-preserving employee satisfaction survey system built with FHEVM (Fully
 
 ## Demo Video
 
-🎥 [Watch Demo Video](encrypted-satisfaction-survey.mp4)
+🎥 [Watch Demo Video](./encrypted-satisfaction-survey.mp4)
 
 ## Live Demo
 
