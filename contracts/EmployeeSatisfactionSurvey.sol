@@ -40,6 +40,8 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
     event SurveySubmitted(uint256 indexed responseId, address indexed employee);
     event ManagerAdded(address indexed manager);
     event ManagerRemoved(address indexed manager);
+    event SurveyPeriodUpdated(uint256 startTime, uint256 endTime);
+    event ResponseValidationFailed(address indexed employee, string reason);
 
     modifier onlyManager() {
         require(managers[msg.sender], "Only managers can access this function");
