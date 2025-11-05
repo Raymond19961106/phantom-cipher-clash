@@ -157,6 +157,26 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         return responses.length;
     }
 
+    /// @notice Get all department statistics (only managers)
+    /// @return departmentIds Array of department IDs that have responses
+    /// @return ratingSums Array of encrypted rating sums for each department
+    /// @return counts Array of encrypted response counts for each department
+    function getAllDepartmentStats()
+        external
+        view
+        onlyManager
+        returns (uint32[] memory departmentIds, euint32[] memory ratingSums, euint32[] memory counts)
+    {
+        // For MVP, we only track department 0 (all departments combined)
+        departmentIds = new uint32[](1);
+        ratingSums = new euint32[](1);
+        counts = new euint32[](1);
+
+        departmentIds[0] = 0;
+        ratingSums[0] = departmentRatingSum[0];
+        counts[0] = departmentResponseCount[0];
+    }
+
     /// @notice Add a manager address
     /// @param manager The address to grant manager privileges
     function addManager(address manager) external onlyManager {
