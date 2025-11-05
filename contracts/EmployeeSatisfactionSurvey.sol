@@ -164,6 +164,26 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         return responses.length;
     }
 
+    /// @notice Check if an address has already submitted a survey
+    /// @param user The address to check
+    /// @return True if the address has submitted a survey, false otherwise
+    function hasAddressSubmitted(address user) external view returns (bool) {
+        return hasSubmitted[user];
+    }
+
+    /// @notice Get survey response by index (only managers)
+    /// @param index The index of the response to retrieve
+    /// @return The survey response struct
+    function getSurveyResponse(uint256 index)
+        external
+        view
+        onlyManager
+        returns (SurveyResponse memory)
+    {
+        require(index < responses.length, "Index out of bounds");
+        return responses[index];
+    }
+
     /// @notice Get all department statistics (only managers)
     /// @return departmentIds Array of department IDs that have responses
     /// @return ratingSums Array of encrypted rating sums for each department
