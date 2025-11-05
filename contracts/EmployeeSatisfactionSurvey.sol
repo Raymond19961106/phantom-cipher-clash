@@ -64,6 +64,8 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         bytes calldata ratingProof,
         bytes calldata departmentProof
     ) external {
+        // Validate feedback length
+        require(encryptedFeedback.length > 0 && encryptedFeedback.length <= 1000, "Feedback length must be between 1 and 1000 bytes");
         // Ensure each address can only submit once
         require(!hasSubmitted[msg.sender], "Address has already submitted a survey");
 
