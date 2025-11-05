@@ -8,6 +8,11 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 /// @notice A contract for collecting encrypted employee satisfaction feedback
 /// @dev Each survey response is encrypted separately to protect employee privacy
 contract EmployeeSatisfactionSurvey is SepoliaConfig {
+    // Constants
+    uint256 public constant MAX_FEEDBACK_LENGTH = 1000;
+    uint256 public constant MIN_RATING = 1;
+    uint256 public constant MAX_RATING = 5;
+    uint256 public constant MAX_DEPARTMENT_ID = 100;
     // Survey response structure
     struct SurveyResponse {
         euint32 satisfactionRating; // 1-5 rating
