@@ -26,6 +26,14 @@ A privacy-preserving employee satisfaction survey system built with FHEVM (Fully
 - **Role-Based Access**: Only managers can view aggregated statistics
 - **Rainbow Wallet Integration**: Easy wallet connection using RainbowKit
 
+## Security Considerations
+
+- **End-to-End Encryption**: All survey data is encrypted client-side before transmission
+- **Homomorphic Operations**: Statistical calculations are performed on encrypted data
+- **Access Control**: Only authorized managers can decrypt aggregated statistics
+- **Audit Trail**: All survey submissions are recorded on-chain with timestamps
+- **Zero-Knowledge**: Individual responses cannot be decrypted by anyone, including contract owners
+
 ## Architecture
 
 ### Smart Contract (`EmployeeSatisfactionSurvey.sol`)
