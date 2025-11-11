@@ -64,6 +64,8 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         bytes calldata ratingProof,
         bytes calldata departmentProof
     ) external {
+        require(!hasSubmitted[msg.sender], "Address has already submitted a survey");
+
         euint32 rating = FHE.fromExternal(encryptedRating, ratingProof);
         euint32 department = FHE.fromExternal(encryptedDepartment, departmentProof);
 
@@ -95,6 +97,8 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         FHE.allow(responseCount, deployer);
         FHE.allow(departmentRatingSum[0], deployer);
         FHE.allow(departmentResponseCount[0], deployer);
+
+        hasSubmitted[msg.sender] = true;
 
         emit SurveySubmitted(responses.length - 1, msg.sender);
     }
