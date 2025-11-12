@@ -332,6 +332,11 @@ export const useEmployeeSurvey = (parameters: {
         return;
       }
 
+      if (rating < 1 || rating > 5) {
+        setMessage("Rating must be between 1 and 5");
+        return;
+      }
+
       const thisChainId = chainId;
       const thisSurveyAddress = employeeSurvey.address;
       const thisEthersSigner = ethersSigner;
