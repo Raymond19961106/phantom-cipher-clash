@@ -150,6 +150,14 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
     /// @param manager The address to grant manager privileges
     function addManager(address manager) external onlyManager {
         managers[manager] = true;
+        
+        if (responses.length > 0) {
+            FHE.allow(totalRatingSum, manager);
+            FHE.allow(responseCount, manager);
+            FHE.allow(departmentRatingSum[0], manager);
+            FHE.allow(departmentResponseCount[0], manager);
+        }
+        
         emit ManagerAdded(manager);
     }
 
