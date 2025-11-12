@@ -276,6 +276,7 @@ export const useEmployeeSurvey = (parameters: {
         );
 
         if (isStale()) {
+          setMessage("Ignore FHEVM decryption");
           return;
         }
 
@@ -290,8 +291,9 @@ export const useEmployeeSurvey = (parameters: {
         }
 
         setMessage("Decryption completed!");
-      } catch (error) {
-        setMessage("Decryption failed");
+      } catch (error: any) {
+        const errorMsg = error?.message || "Unknown error";
+        setMessage(`Decryption failed: ${errorMsg}`);
       } finally {
         isDecryptingRef.current = false;
         setIsDecrypting(false);
