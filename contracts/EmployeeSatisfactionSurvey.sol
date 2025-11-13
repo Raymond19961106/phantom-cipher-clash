@@ -82,6 +82,12 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
         totalRatingSum = FHE.add(totalRatingSum, rating);
         responseCount = FHE.add(responseCount, FHE.asEuint32(1));
 
+        // Update department aggregates
+        // Note: Since FHE encrypted values cannot be directly used as mapping keys,
+        // we store all department statistics in departmentId=0 as a simplified approach.
+        // The actual departmentId is stored in the SurveyResponse struct for future reference.
+        // In production, you might need to use a different data structure that supports
+        // encrypted key lookups, or maintain separate mappings for each known department.
         euint32 one = FHE.asEuint32(1);
         departmentRatingSum[0] = FHE.add(departmentRatingSum[0], rating);
         departmentResponseCount[0] = FHE.add(departmentResponseCount[0], one);
