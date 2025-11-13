@@ -37,9 +37,9 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
     mapping(uint32 => euint32) public departmentRatingSum;
     mapping(uint32 => euint32) public departmentResponseCount;
 
-    event SurveySubmitted(uint256 indexed responseId, address indexed employee);
-    event ManagerAdded(address indexed manager);
-    event ManagerRemoved(address indexed manager);
+    event SurveySubmitted(uint256 indexed responseId, address indexed employee, uint256 timestamp);
+    event ManagerAdded(address indexed manager, address indexed addedBy);
+    event ManagerRemoved(address indexed manager, address indexed removedBy);
 
     modifier onlyManager() {
         require(managers[msg.sender], "Only managers can access this function");
@@ -106,7 +106,7 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
 
         hasSubmitted[msg.sender] = true;
 
-        emit SurveySubmitted(responses.length - 1, msg.sender);
+        emit SurveySubmitted(responses.length - 1, msg.sender, block.timestamp);
     }
 
     /// @notice Get aggregated average rating (only managers)
@@ -164,13 +164,13 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
             FHE.allow(departmentResponseCount[0], manager);
         }
         
-        emit ManagerAdded(manager);
+        emit ManagerAdded(manager, msg.sender);
     }
 
     /// @notice Remove a manager address
     /// @param manager The address to revoke manager privileges
     function removeManager(address manager) external onlyManager {
         managers[manager] = false;
-        emit ManagerRemoved(manager);
+        emit ManagerRemoved(manager, msg.sender);
     }
 }
