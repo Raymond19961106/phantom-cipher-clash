@@ -176,5 +176,54 @@ describe("EmployeeSatisfactionSurvey", function () {
       surveyContract.connect(signers.alice).getResponseCount()
     ).to.be.revertedWith("Only managers can access this function");
   });
+
+  it("should not allow duplicate submissions from same address", async function () {
+    const rating = 5;
+    const department = 1;
+
+    const encryptedRating = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(rating)
+      .encrypt();
+
+    const encryptedDepartment = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(department)
+      .encrypt();
+
+    const emptyFeedback = "0x";
+
+    await surveyContract
+      .connect(signers.alice)
+      .submitSurvey(
+        encryptedRating.handles[0],
+        encryptedDepartment.handles[0],
+        emptyFeedback,
+        encryptedRating.inputProof,
+        encryptedDepartment.inputProof
+      );
+
+    const encryptedRating2 = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(4)
+      .encrypt();
+
+    const encryptedDepartment2 = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(2)
+      .encrypt();
+
+    await expect(
+      surveyContract
+        .connect(signers.alice)
+        .submitSurvey(
+          encryptedRating2.handles[0],
+          encryptedDepartment2.handles[0],
+          emptyFeedback,
+          encryptedRating2.inputProof,
+          encryptedDepartment2.inputProof
+        )
+    ).to.be.revertedWith("Address has already submitted a survey");
+  });
 });
 
