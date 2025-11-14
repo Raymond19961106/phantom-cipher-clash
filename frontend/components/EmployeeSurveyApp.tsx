@@ -32,6 +32,15 @@ export function EmployeeSurveyApp() {
     if (walletClient) {
       const provider = new ethers.BrowserProvider(walletClient.transport as any);
       setEthersReadonlyProvider(provider);
+      provider.getSigner().then((signer) => {
+        setEthersSigner(signer);
+      }).catch((error) => {
+        console.error("Failed to get signer:", error);
+        setEthersSigner(undefined);
+      });
+    } else {
+      setEthersSigner(undefined);
+      setEthersReadonlyProvider(undefined);
     }
   }, [walletClient]);
 
