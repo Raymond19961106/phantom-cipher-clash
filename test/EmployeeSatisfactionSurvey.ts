@@ -225,5 +225,88 @@ describe("EmployeeSatisfactionSurvey", function () {
         )
     ).to.be.revertedWith("Address has already submitted a survey");
   });
+
+  it("should handle edge case: minimum rating value", async function () {
+    const rating = 1;
+    const department = 1;
+
+    const encryptedRating = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(rating)
+      .encrypt();
+
+    const encryptedDepartment = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(department)
+      .encrypt();
+
+    const tx = await surveyContract
+      .connect(signers.alice)
+      .submitSurvey(
+        encryptedRating.handles[0],
+        encryptedDepartment.handles[0],
+        "0x",
+        encryptedRating.inputProof,
+        encryptedDepartment.inputProof
+      );
+    await tx.wait();
+
+    const responseCount = await surveyContract.getResponseCount();
+    const clearCount = await fhevm.userDecryptEuint(
+      FhevmType.euint32,
+      responseCount,
+      surveyContractAddress,
+      signers.deployer,
+    );
+    expect(clearCount).to.eq(1);
+  });
+
+  it("should handle edge case: maximum rating value", async function () {
+    const rating = 5;
+    const department = 1;
+
+    const encryptedRating = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(rating)
+      .encrypt();
+
+    const encryptedDepartment = await fhevm
+      .createEncryptedInput(surveyContractAddress, signers.alice.address)
+      .add32(department)
+      .encrypt();
+
+    const tx = await surveyContract
+      .connect(signers.alice)
+      .submitSurvey(
+        encryptedRating.handles[0],
+        encryptedDepartment.handles[0],
+        "0x",
+        encryptedRating.inputProof,
+        encryptedDepartment.inputProof
+      );
+    await tx.wait();
+
+    const responseCount = await surveyContract.getResponseCount();
+    const clearCount = await fhevm.userDecryptEuint(
+      FhevmType.euint32,
+      responseCount,
+      surveyContractAddress,
+      signers.deployer,
+    );
+    expect(clearCount).to.eq(1);
+  });
+
+  it("should prevent non-manager from adding managers", async function () {
+    await expect(
+      surveyContract.connect(signers.alice).addManager(signers.bob.address)
+    ).to.be.revertedWith("Only managers can access this function");
+  });
+
+  it("should prevent non-manager from removing managers", async function () {
+    await surveyContract.addManager(signers.alice.address);
+    await expect(
+      surveyContract.connect(signers.alice).removeManager(signers.alice.address)
+    ).to.be.revertedWith("Only managers can access this function");
+  });
 });
 
