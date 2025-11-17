@@ -11,6 +11,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   console.log(`EmployeeSatisfactionSurvey contract: `, deployedSurvey.address);
+
+  const surveyContract = await hre.ethers.getContractAt(
+    "EmployeeSatisfactionSurvey",
+    deployedSurvey.address
+  );
+  const isManager = await surveyContract.managers(deployer);
+  if (!isManager) {
+    throw new Error("Deployer is not set as manager after deployment");
+  }
+  console.log(`Deployer ${deployer} verified as manager`);
 };
 export default func;
 func.id = "deploy_survey";
