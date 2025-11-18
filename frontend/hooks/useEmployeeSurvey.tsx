@@ -109,7 +109,7 @@ export const useEmployeeSurvey = (parameters: {
   }, [employeeSurvey]);
 
   const canGetStats = useMemo(() => {
-    return employeeSurvey.address && ethersReadonlyProvider && !isRefreshing;
+    return Boolean(employeeSurvey.address) && Boolean(ethersReadonlyProvider) && !isRefreshing;
   }, [employeeSurvey.address, ethersReadonlyProvider, isRefreshing]);
 
   const refreshStats = useCallback(async () => {
@@ -316,9 +316,9 @@ export const useEmployeeSurvey = (parameters: {
 
   const canSubmit = useMemo(() => {
     return (
-      employeeSurvey.address &&
-      instance &&
-      ethersSigner &&
+      Boolean(employeeSurvey.address) &&
+      Boolean(instance) &&
+      Boolean(ethersSigner) &&
       !isRefreshing &&
       !isSubmitting
     );
