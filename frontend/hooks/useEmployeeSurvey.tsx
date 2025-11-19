@@ -405,8 +405,9 @@ export const useEmployeeSurvey = (parameters: {
           }
 
           refreshStats();
-        } catch (error: any) {
-          setMessage(`Submission failed: ${error?.message || "Unknown error"}`);
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          setMessage(`Submission failed: ${errorMessage}`);
         } finally {
           isSubmittingRef.current = false;
           setIsSubmitting(false);
