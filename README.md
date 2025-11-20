@@ -311,6 +311,67 @@ encrypted-satisfaction-survey/
 3. Update frontend components in `frontend/components/`
 4. Update hooks in `frontend/hooks/`
 
+## Troubleshooting
+
+### Common Issues
+
+**FHEVM Initialization Failed**
+- Ensure your Hardhat node supports FHEVM metadata
+- For localhost testing, use a FHEVM-enabled Hardhat node
+- Consider using Sepolia testnet for full FHEVM functionality
+
+**Wallet Connection Issues**
+- Ensure your wallet is connected to the correct network
+- Check that the contract is deployed on the selected network
+- Verify your wallet has sufficient funds for gas fees
+
+**Decryption Errors**
+- Only managers can decrypt statistics
+- Ensure you have the correct manager permissions
+- Check that FHE permissions were granted during manager addition
+
+### Network Configuration
+
+The project supports multiple networks:
+- **Localhost**: For local development and testing
+- **Sepolia**: Ethereum testnet with FHEVM support
+- **Anvil**: Alternative local development network
+
+Configure networks in `hardhat.config.ts` and update contract addresses in `frontend/abi/EmployeeSatisfactionSurveyAddresses.ts`.
+
+## Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow Solidity style guide for contract code
+- Use TypeScript strict mode for frontend code
+- Write tests for all new features
+- Update documentation for API changes
+- Ensure all tests pass before submitting PR
+
+## Performance Considerations
+
+- **Gas Optimization**: The contract uses efficient FHE operations
+- **Frontend Performance**: React hooks are optimized with useMemo and useCallback
+- **Network Latency**: Consider using local networks for faster development
+
+## Future Enhancements
+
+Potential improvements for future versions:
+- Support for multiple survey types
+- Department-specific statistics with proper FHE key management
+- Advanced analytics and reporting
+- Integration with additional wallet providers
+- Mobile app support
+
 ## License
 
 BSD-3-Clause-Clear
@@ -318,7 +379,11 @@ BSD-3-Clause-Clear
 ## Acknowledgments
 
 Built using:
-- [FHEVM](https://github.com/zama-ai/fhevm) by Zama
-- [Hardhat](https://hardhat.org/)
-- [Next.js](https://nextjs.org/)
-- [RainbowKit](https://rainbowkit.com/)
+- [FHEVM](https://github.com/zama-ai/fhevm) by Zama - Fully Homomorphic Encryption Virtual Machine
+- [Hardhat](https://hardhat.org/) - Ethereum development environment
+- [Next.js](https://nextjs.org/) - React framework
+- [RainbowKit](https://rainbowkit.com/) - Wallet connection library
+- [Wagmi](https://wagmi.sh/) - React Hooks for Ethereum
+- [Ethers.js](https://ethers.org/) - Ethereum library
+
+Special thanks to the Zama team for their groundbreaking work on FHEVM and privacy-preserving blockchain technology.
