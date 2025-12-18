@@ -5,6 +5,7 @@ import { expect } from "chai";
 import { FhevmType } from "@fhevm/hardhat-plugin";
 
 type Signers = {
+  deployer: HardhatEthersSigner;
   alice: HardhatEthersSigner;
 };
 
@@ -35,7 +36,7 @@ describe("EmployeeSatisfactionSurveySepolia", function () {
     }
 
     const ethSigners: HardhatEthersSigner[] = await ethers.getSigners();
-    signers = { alice: ethSigners[0] };
+    signers = { deployer: ethSigners[0], alice: ethSigners[0] }; // On Sepolia, deployer is typically the first signer
   });
 
   beforeEach(async () => {
@@ -50,6 +51,7 @@ describe("EmployeeSatisfactionSurveySepolia", function () {
 
     const rating = 5;
     const department = 1;
+    const plaintextDepartmentId = 1;
 
     progress(`Encrypting rating '${rating}'...`);
     const encryptedRating = await fhevm
@@ -71,6 +73,7 @@ describe("EmployeeSatisfactionSurveySepolia", function () {
       .submitSurvey(
         encryptedRating.handles[0],
         encryptedDepartment.handles[0],
+        plaintextDepartmentId,
         "0x",
         encryptedRating.inputProof,
         encryptedDepartment.inputProof
@@ -78,15 +81,17 @@ describe("EmployeeSatisfactionSurveySepolia", function () {
     await tx.wait();
 
     progress(`Call getResponseCount()...`);
-    const responseCount = await surveyContract.getResponseCount();
+    // getResponseCount() requires manager permission, so use deployer
+    const responseCount = await surveyContract.connect(signers.deployer).getResponseCount();
     expect(responseCount).to.not.eq(ethers.ZeroHash);
 
     progress(`Decrypting getResponseCount()=${responseCount}...`);
+    // Decrypt using deployer since they have manager permissions
     const clearCount = await fhevm.userDecryptEuint(
       FhevmType.euint32,
       responseCount,
       surveyContractAddress,
-      signers.alice,
+      signers.deployer,
     );
     progress(`Clear getResponseCount()=${clearCount}`);
 

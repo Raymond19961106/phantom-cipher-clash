@@ -20,8 +20,9 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
     // Management addresses that can view aggregated reports
     mapping(address => bool) public managers;
 
-    // Track which addresses have already submitted a survey
-    mapping(address => bool) public hasSubmitted;
+    // Track which addresses have already submitted a survey to each department
+    // mapping(address => mapping(uint32 => bool)) means: has this address submitted to this department?
+    mapping(address => mapping(uint32 => bool)) public hasSubmittedToDepartment;
 
     // Deployer address (initial manager)
     address private deployer;
@@ -53,18 +54,20 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
 
     /// @notice Submit a survey response with encrypted data
     /// @param encryptedRating Encrypted satisfaction rating (1-5)
-    /// @param encryptedDepartment Encrypted department ID
+    /// @param encryptedDepartment Encrypted department ID (for privacy)
+    /// @param plaintextDepartmentId Plaintext department ID (for statistics, department info is typically not sensitive)
     /// @param encryptedFeedback Encrypted feedback text
     /// @param ratingProof Proof for rating encryption
     /// @param departmentProof Proof for department encryption
     function submitSurvey(
         externalEuint32 encryptedRating,
         externalEuint32 encryptedDepartment,
+        uint32 plaintextDepartmentId,
         bytes calldata encryptedFeedback,
         bytes calldata ratingProof,
         bytes calldata departmentProof
     ) external {
-        require(!hasSubmitted[msg.sender], "Address has already submitted a survey");
+        require(!hasSubmittedToDepartment[msg.sender][plaintextDepartmentId], "Address has already submitted a survey to this department");
 
         euint32 rating = FHE.fromExternal(encryptedRating, ratingProof);
         euint32 department = FHE.fromExternal(encryptedDepartment, departmentProof);
@@ -80,23 +83,27 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
 
         euint32 one = FHE.asEuint32(1);
         
+        // Update total statistics
         totalRatingSum = FHE.add(totalRatingSum, rating);
         responseCount = FHE.add(responseCount, one);
 
-        departmentRatingSum[0] = FHE.add(departmentRatingSum[0], rating);
-        departmentResponseCount[0] = FHE.add(departmentResponseCount[0], one);
+        // Update department-specific statistics using plaintext department ID
+        departmentRatingSum[plaintextDepartmentId] = FHE.add(departmentRatingSum[plaintextDepartmentId], rating);
+        departmentResponseCount[plaintextDepartmentId] = FHE.add(departmentResponseCount[plaintextDepartmentId], one);
 
+        // Grant permissions for total stats
         FHE.allowThis(totalRatingSum);
         FHE.allowThis(responseCount);
-        FHE.allowThis(departmentRatingSum[0]);
-        FHE.allowThis(departmentResponseCount[0]);
-        
         FHE.allow(totalRatingSum, deployer);
         FHE.allow(responseCount, deployer);
-        FHE.allow(departmentRatingSum[0], deployer);
-        FHE.allow(departmentResponseCount[0], deployer);
+        
+        // Grant permissions for department stats
+        FHE.allowThis(departmentRatingSum[plaintextDepartmentId]);
+        FHE.allowThis(departmentResponseCount[plaintextDepartmentId]);
+        FHE.allow(departmentRatingSum[plaintextDepartmentId], deployer);
+        FHE.allow(departmentResponseCount[plaintextDepartmentId], deployer);
 
-        hasSubmitted[msg.sender] = true;
+        hasSubmittedToDepartment[msg.sender][plaintextDepartmentId] = true;
 
         emit SurveySubmitted(responses.length - 1, msg.sender, block.timestamp);
     }
@@ -146,14 +153,15 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
 
     /// @notice Add a manager address
     /// @param manager The address to grant manager privileges
+    /// @dev Note: This function only grants manager role. To grant FHE permissions for
+    /// specific departments, use grantDepartmentAccess() or grantMultipleDepartmentAccess()
     function addManager(address manager) external onlyManager {
         managers[manager] = true;
         
         if (responses.length > 0) {
+            // Grant permissions for total stats (these are always initialized when responses exist)
             FHE.allow(totalRatingSum, manager);
             FHE.allow(responseCount, manager);
-            FHE.allow(departmentRatingSum[0], manager);
-            FHE.allow(departmentResponseCount[0], manager);
         }
         
         emit ManagerAdded(manager, msg.sender);
@@ -164,5 +172,28 @@ contract EmployeeSatisfactionSurvey is SepoliaConfig {
     function removeManager(address manager) external onlyManager {
         managers[manager] = false;
         emit ManagerRemoved(manager, msg.sender);
+    }
+
+    /// @notice Grant FHE permissions to a manager for a specific department
+    /// @param manager The manager address
+    /// @param departmentId The department ID to grant permissions for
+    /// @dev This function allows granting permissions for specific departments
+    /// Useful when adding new managers or when new departments are added
+    function grantDepartmentAccess(address manager, uint32 departmentId) external onlyManager {
+        require(managers[manager], "Address is not a manager");
+        FHE.allow(departmentRatingSum[departmentId], manager);
+        FHE.allow(departmentResponseCount[departmentId], manager);
+    }
+
+    /// @notice Grant FHE permissions to a manager for multiple departments
+    /// @param manager The manager address
+    /// @param departmentIds Array of department IDs to grant permissions for
+    /// @dev Batch function to grant permissions for multiple departments at once
+    function grantMultipleDepartmentAccess(address manager, uint32[] calldata departmentIds) external onlyManager {
+        require(managers[manager], "Address is not a manager");
+        for (uint256 i = 0; i < departmentIds.length; i++) {
+            FHE.allow(departmentRatingSum[departmentIds[i]], manager);
+            FHE.allow(departmentResponseCount[departmentIds[i]], manager);
+        }
     }
 }

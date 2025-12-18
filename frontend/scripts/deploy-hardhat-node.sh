@@ -40,8 +40,8 @@ if [ $ATTEMPTS -eq $TIMEOUT_SECONDS ]; then
     exit 1
 fi
 
-# --- Deploy FHECounter.sol on localhost ---
-echo "--- Deploying FHECounter.sol on Hardhat Node ---"
+# --- Deploy EmployeeSatisfactionSurvey.sol on localhost ---
+echo "--- Deploying EmployeeSatisfactionSurvey.sol on Hardhat Node ---"
 npx hardhat deploy --network localhost || true
 
 # Capture the test exit code 
