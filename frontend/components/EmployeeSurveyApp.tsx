@@ -68,9 +68,6 @@ export function EmployeeSurveyApp() {
     setFeedback("");
   };
 
-  const averageRating = survey.clearResponseCount && survey.clearRatingSum
-    ? Number(survey.clearRatingSum) / Number(survey.clearResponseCount)
-    : null;
 
   if (!isConnected) {
     return (
@@ -82,10 +79,7 @@ export function EmployeeSurveyApp() {
             </svg>
             <h2 className="text-2xl font-bold text-gray-800">Connect Your Wallet</h2>
           </div>
-          <p className="text-gray-600 mb-6">Please connect your wallet to access the Employee Satisfaction Survey. Your responses are encrypted to protect your privacy.</p>
-          <div className="flex justify-center">
-            <ConnectButton />
-          </div>
+          <p className="text-gray-600">Please connect your wallet using the button in the header to access the Employee Satisfaction Survey. Your responses are encrypted to protect your privacy.</p>
         </div>
       </div>
     );
@@ -270,42 +264,7 @@ export function EmployeeSurveyApp() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                  <h3 className="text-sm font-medium text-blue-600 mb-2">Total Responses</h3>
-                  <p className="text-3xl font-bold text-blue-800">
-                    {survey.clearResponseCount !== undefined
-                      ? String(survey.clearResponseCount)
-                      : survey.responseCountHandle && survey.responseCountHandle !== ethers.ZeroHash
-                        ? "Encrypted"
-                        : "0"}
-                  </p>
-                </div>
-
-                <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                  <h3 className="text-sm font-medium text-green-600 mb-2">Total Rating Sum</h3>
-                  <p className="text-3xl font-bold text-green-800">
-                    {survey.clearRatingSum !== undefined
-                      ? String(survey.clearRatingSum)
-                      : survey.ratingSumHandle && survey.ratingSumHandle !== ethers.ZeroHash
-                        ? "Encrypted"
-                        : "0"}
-                  </p>
-                </div>
-
-                <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-                  <h3 className="text-sm font-medium text-purple-600 mb-2">Average Rating</h3>
-                  <p className="text-3xl font-bold text-purple-800">
-                    {averageRating !== null
-                      ? averageRating.toFixed(2)
-                      : survey.clearResponseCount && survey.clearRatingSum
-                        ? "Calculating..."
-                        : "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap">
                 <button
                   onClick={survey.refreshStats}
                   disabled={!survey.canGetStats || survey.isRefreshing}
@@ -339,6 +298,95 @@ export function EmployeeSurveyApp() {
                         : "Decrypt Statistics"}
                   </span>
                 </button>
+
+                <button
+                  onClick={survey.refreshDepartmentStats}
+                  disabled={survey.isLoadingDepartments}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {survey.isLoadingDepartments && (
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  <span>{survey.isLoadingDepartments ? "Loading..." : "Refresh Departments"}</span>
+                </button>
+              </div>
+
+              {/* Department Statistics Cards - Main Focus */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">Department Statistics</h3>
+                    <p className="text-sm text-gray-600 mt-1">View statistics for each department separately</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { id: 1, name: "Engineering" },
+                    { id: 2, name: "Product" },
+                    { id: 3, name: "Sales" },
+                    { id: 4, name: "Marketing" },
+                    { id: 5, name: "HR" },
+                    { id: 6, name: "Operations" },
+                  ].map((dept) => {
+                    const stats = survey.departmentStats?.get(dept.id);
+                    const clearStats = survey.clearDepartmentStats?.get(dept.id);
+                    const hasData = stats && stats.ratingSum !== ethers.ZeroHash && stats.count !== ethers.ZeroHash;
+
+                    return (
+                      <div
+                        key={dept.id}
+                        className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-6 shadow-md hover:shadow-lg transition-shadow"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-bold text-gray-800">{dept.name}</h4>
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                            {dept.id}
+                          </div>
+                        </div>
+
+                        {hasData ? (
+                          clearStats ? (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Average Rating:</span>
+                                <span className="text-2xl font-bold text-blue-700">
+                                  {clearStats.average.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Total Responses:</span>
+                                <span className="text-lg font-semibold text-gray-800">
+                                  {String(clearStats.count)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Rating Sum:</span>
+                                <span className="text-lg font-semibold text-gray-800">
+                                  {String(clearStats.ratingSum)}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Status:</span>
+                                <span className="text-sm font-medium text-gray-700">Encrypted</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-2">
+                                Click "Decrypt Statistics" to view
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-sm text-gray-500">No data available</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {survey.message && (

@@ -82,11 +82,15 @@ export function SubmitForm() {
       // Create contract instance
       const contract = new Contract(contractAddress, CONTRACT_ABI, signer);
 
+      // Convert feedback to bytes
+      const feedbackBytes = feedback ? new TextEncoder().encode(feedback) : new Uint8Array(0);
+
       // Submit survey
       const tx = await contract.submitSurvey(
         encryptedRating.handles[0],
         encryptedDepartment.handles[0],
-        '0x', // Empty feedback for now
+        department, // plaintextDepartmentId
+        feedbackBytes,
         encryptedRating.inputProof,
         encryptedDepartment.inputProof
       );

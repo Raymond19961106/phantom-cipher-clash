@@ -18,6 +18,12 @@ export const EmployeeSatisfactionSurveyABI = {
           "internalType": "address",
           "name": "manager",
           "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "addedBy",
+          "type": "address"
         }
       ],
       "name": "ManagerAdded",
@@ -30,6 +36,12 @@ export const EmployeeSatisfactionSurveyABI = {
           "indexed": true,
           "internalType": "address",
           "name": "manager",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "removedBy",
           "type": "address"
         }
       ],
@@ -50,6 +62,12 @@ export const EmployeeSatisfactionSurveyABI = {
           "internalType": "address",
           "name": "employee",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
         }
       ],
       "name": "SurveySubmitted",
@@ -186,11 +204,52 @@ export const EmployeeSatisfactionSurveyABI = {
       "inputs": [
         {
           "internalType": "address",
-          "name": "",
+          "name": "manager",
           "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "departmentId",
+          "type": "uint32"
         }
       ],
-      "name": "hasSubmitted",
+      "name": "grantDepartmentAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "manager",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32[]",
+          "name": "departmentIds",
+          "type": "uint32[]"
+        }
+      ],
+      "name": "grantMultipleDepartmentAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "name": "hasSubmittedToDepartment",
       "outputs": [
         {
           "internalType": "bool",
@@ -296,6 +355,11 @@ export const EmployeeSatisfactionSurveyABI = {
           "internalType": "externalEuint32",
           "name": "encryptedDepartment",
           "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "plaintextDepartmentId",
+          "type": "uint32"
         },
         {
           "internalType": "bytes",

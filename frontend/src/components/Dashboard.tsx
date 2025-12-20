@@ -8,6 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, RefreshCw, BarChart3 } from 'lucide-react';
 
+const DEPARTMENTS = [
+  { id: 1, name: 'Engineering' },
+  { id: 2, name: 'Product' },
+  { id: 3, name: 'Sales' },
+  { id: 4, name: 'Marketing' },
+  { id: 5, name: 'HR' },
+  { id: 6, name: 'Operations' },
+];
+
+type DepartmentStats = {
+  ratingSum: string | null;
+  count: string | null;
+  clearRatingSum: number | null;
+  clearCount: number | null;
+  average: number | null;
+};
+
 export function Dashboard() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -27,15 +44,8 @@ export function Dashboard() {
   
   const [isManager, setIsManager] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<{
-    responseCount: number | null;
-    totalRatingSum: number | null;
-    averageRating: number | null;
-  }>({
-    responseCount: null,
-    totalRatingSum: null,
-    averageRating: null,
-  });
+  const [isDecrypting, setIsDecrypting] = useState(false);
+  const [departmentStats, setDepartmentStats] = useState<Map<number, DepartmentStats>>(new Map());
 
   useEffect(() => {
     if (isConnected && signer) {
@@ -59,7 +69,7 @@ export function Dashboard() {
     }
   };
 
-  const loadStatistics = async () => {
+  const loadDepartmentStats = async () => {
     if (!isConnected || !instance || !signer || !isManager) return;
 
     setIsLoading(true);
@@ -70,14 +80,74 @@ export function Dashboard() {
       }
 
       const contract = new Contract(contractAddress, CONTRACT_ABI, signer);
+      const newStats = new Map<number, DepartmentStats>();
 
-      // Get encrypted statistics
-      const [encryptedCount, encryptedSum] = await Promise.all([
-        contract.getResponseCount(),
-        contract.getTotalRatingSum(),
-      ]);
+      // Get encrypted statistics for each department
+      for (const dept of DEPARTMENTS) {
+        try {
+          const [ratingSum, count] = await contract.getDepartmentStats(dept.id);
+          newStats.set(dept.id, {
+            ratingSum: ratingSum,
+            count: count,
+            clearRatingSum: null,
+            clearCount: null,
+            average: null,
+          });
+        } catch (error) {
+          console.error(`Failed to get stats for department ${dept.id}:`, error);
+          newStats.set(dept.id, {
+            ratingSum: null,
+            count: null,
+            clearRatingSum: null,
+            clearCount: null,
+            average: null,
+          });
+        }
+      }
 
-      // Decrypt statistics using userDecrypt
+      setDepartmentStats(newStats);
+    } catch (error) {
+      console.error('Error loading department statistics:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const decryptDepartmentStats = async () => {
+    if (!isConnected || !instance || !signer || !isManager) return;
+
+    setIsDecrypting(true);
+    try {
+      const contractAddress = getContractAddress(chainId);
+      if (!contractAddress) {
+        throw new Error('Contract not deployed on this network');
+      }
+
+      // Collect all handles that need to be decrypted
+      const handles: Array<{ handle: string; contractAddress: string }> = [];
+      const handleMap = new Map<string, { deptId: number; type: 'sum' | 'count' }>();
+
+      for (const [deptId, stats] of departmentStats.entries()) {
+        if (stats.ratingSum && stats.ratingSum !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          if (!handles.find(h => h.handle === stats.ratingSum)) {
+            handles.push({ handle: stats.ratingSum!, contractAddress });
+            handleMap.set(stats.ratingSum!, { deptId, type: 'sum' });
+          }
+        }
+        if (stats.count && stats.count !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          if (!handles.find(h => h.handle === stats.count)) {
+            handles.push({ handle: stats.count!, contractAddress });
+            handleMap.set(stats.count!, { deptId, type: 'count' });
+          }
+        }
+      }
+
+      if (handles.length === 0) {
+        console.log('No handles to decrypt');
+        return;
+      }
+
+      // Create decryption signature
       const keypair = instance.generateKeypair();
       const startTimeStamp = Math.floor(Date.now() / 1000).toString();
       const durationDays = "10";
@@ -99,11 +169,9 @@ export function Dashboard() {
         message: eip712.message as any,
       });
 
+      // Decrypt all handles at once
       const decryptResult = await instance.userDecrypt(
-        [
-          { handle: encryptedCount, contractAddress },
-          { handle: encryptedSum, contractAddress },
-        ],
+        handles,
         keypair.privateKey,
         keypair.publicKey,
         signature.replace('0x', ''),
@@ -113,26 +181,49 @@ export function Dashboard() {
         durationDays,
       );
 
-      const count = Number(decryptResult[encryptedCount] || 0);
-      const sum = Number(decryptResult[encryptedSum] || 0);
+      // Update stats with decrypted values
+      const updatedStats = new Map(departmentStats);
+      const deptData = new Map<number, { ratingSum?: number; count?: number }>();
 
-      const average = count > 0 ? sum / count : 0;
+      // Group decrypted values by department
+      for (const [handle, value] of Object.entries(decryptResult)) {
+        const info = handleMap.get(handle);
+        if (info) {
+          const existing = deptData.get(info.deptId) || {};
+          if (info.type === 'sum') {
+            existing.ratingSum = Number(value || 0);
+          } else {
+            existing.count = Number(value || 0);
+          }
+          deptData.set(info.deptId, existing);
+        }
+      }
 
-      setStats({
-        responseCount: Number(count),
-        totalRatingSum: Number(sum),
-        averageRating: average,
-      });
+      // Calculate averages and update stats
+      for (const [deptId, data] of deptData.entries()) {
+        const currentStats = updatedStats.get(deptId);
+        if (currentStats && data.ratingSum !== undefined && data.count !== undefined) {
+          const average = data.count > 0 ? data.ratingSum / data.count : 0;
+          updatedStats.set(deptId, {
+            ...currentStats,
+            clearRatingSum: data.ratingSum,
+            clearCount: data.count,
+            average: average,
+          });
+        }
+      }
+
+      setDepartmentStats(updatedStats);
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      console.error('Error decrypting department statistics:', error);
     } finally {
-      setIsLoading(false);
+      setIsDecrypting(false);
     }
   };
 
   useEffect(() => {
     if (isManager && instance && signer) {
-      loadStatistics();
+      loadDepartmentStats();
     }
   }, [isManager, instance, signer, chainId]);
 
@@ -171,6 +262,10 @@ export function Dashboard() {
     );
   }
 
+  const hasAnyData = Array.from(departmentStats.values()).some(
+    stats => stats.ratingSum !== null && stats.count !== null
+  );
+
   return (
     <div className="space-y-6">
       <Card>
@@ -179,48 +274,100 @@ export function Dashboard() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Management Dashboard
+                Department Statistics
               </CardTitle>
               <CardDescription>
-                View aggregated survey statistics (decrypted for managers only)
+                View statistics for each department separately (decrypted for managers only)
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadStatistics}
-              disabled={isLoading}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadDepartmentStats}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={decryptDepartmentStats}
+                disabled={isDecrypting || !hasAnyData}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isDecrypting ? 'animate-spin' : ''}`} />
+                {isDecrypting ? 'Decrypting...' : 'Decrypt'}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 text-primary" />
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
-          ) : stats.responseCount === null ? (
+          ) : !hasAnyData ? (
             <div className="text-center py-8 text-muted-foreground">
-              Click "Refresh" to load statistics
+              Click "Refresh" to load department statistics
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="text-sm text-muted-foreground mb-1">Total Responses</div>
-                <div className="text-3xl font-bold text-primary">{stats.responseCount}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-secondary/10 border border-secondary/20">
-                <div className="text-sm text-muted-foreground mb-1">Total Rating Sum</div>
-                <div className="text-3xl font-bold text-secondary">{stats.totalRatingSum}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
-                <div className="text-sm text-muted-foreground mb-1">Average Rating</div>
-                <div className="text-3xl font-bold text-accent">
-                  {stats.averageRating !== null ? stats.averageRating.toFixed(2) : 'N/A'}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {DEPARTMENTS.map((dept) => {
+                const stats = departmentStats.get(dept.id);
+                const hasData = stats && stats.ratingSum !== null && stats.count !== null;
+                const isDecrypted = stats && stats.clearRatingSum !== null && stats.clearCount !== null;
+
+                return (
+                  <Card key={dept.id} className="bg-gray-800/50 border border-gray-700 hover:border-purple-500/50 transition-colors">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-100">{dept.name}</h3>
+                        <div className="w-10 h-10 rounded-full bg-purple-600/80 flex items-center justify-center text-white font-bold">
+                          {dept.id}
+                        </div>
+                      </div>
+
+                      {hasData ? (
+                        isDecrypted ? (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Average Rating:</span>
+                              <span className="text-2xl font-bold text-purple-400">
+                                {stats.average !== null ? stats.average.toFixed(2) : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Total Responses:</span>
+                              <span className="text-lg font-semibold text-gray-200">
+                                {stats.clearCount}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Rating Sum:</span>
+                              <span className="text-lg font-semibold text-gray-200">
+                                {stats.clearRatingSum}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Status:</span>
+                              <span className="text-sm font-medium text-purple-400">Encrypted</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              Click "Decrypt" to view
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-sm text-gray-500">No data available</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -228,4 +375,3 @@ export function Dashboard() {
     </div>
   );
 }
-
