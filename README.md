@@ -13,11 +13,11 @@ This project demonstrates the power of Fully Homomorphic Encryption (FHE) in cre
 
 ## Demo Video
 
-🎥 [Watch Demo Video](encrypted-satisfaction-survey.mp4)
+🎥 [Watch Demo Video](https://youtu.be/2sGPaN9VaNU)
 
 ## Live Demo
 
-🚀 [Vercel Live Demo](https://encrypted-satisfaction-survey.vercel.app/)
+🚀 [Vercel Live Demo](https://encrypted-satisfaction-survey-pro.vercel.app/)
 
 ## Contract Addresses
 
